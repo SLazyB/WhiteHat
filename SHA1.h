@@ -1,5 +1,6 @@
 //This file will contain the SHA-1 implementation algorithm
-//Basing implementation from this source: https://github.com/vog/sha1/blob/master/sha1.cpp
+//Basing implementation from this source: https://github.com/vog/sha1
+//Also looked extensively at this source: https://github.com/sirikata/liboauthcpp/tree/master/src
 #ifndef SHA1_h_
 #define SHA1_h_
 
@@ -24,6 +25,7 @@ class SHA1
 		void update(const string &input);
 		void update(istream &inputstream);
 //		static void begin(uint32_t digest[], string &buffer, uint64_t &transforms);
+	private:
 		uint32_t digest[5];
 		string buffer;
 		uint64_t transforms;
@@ -189,17 +191,23 @@ static void string_to_block(const string &buffer, uint32_t block[BLOCK_INTS])
 	}
 }
 
+//Default constructor, calls the initialization function
 SHA1::SHA1()
 {
 	begin(digest, buffer, transforms);
 }
 
+//Overloaded update method, takes a string and formats it to the easier update function
+//Also by doing this it enables the ability to write a function that can take input from a file while keeping the same
+//overall functionality
 void SHA1::update(const string &input)
 {
 	istringstream is(input);
 	update(is);
 }
 
+
+//Takes in the input and runs through the transformations as 512 bit blocks
 void SHA1::update(istream &inputstream)
 {
 	while (true)
@@ -218,6 +226,7 @@ void SHA1::update(istream &inputstream)
 	}
 }
 
+//Finalizes the hashed string and returns it
 string SHA1::final()
 {
 	uint64_t total_bits = (transforms*BLOCK_BYTES + buffer.size())*8;
@@ -258,4 +267,3 @@ string SHA1::final()
 
 	return result.str();
 }
-

@@ -26,6 +26,9 @@ class HMAC
 
 #endif
 
+
+//I copied this function from the following link:
+//https://stackoverflow.com/questions/3381614/c-convert-string-to-hexadecimal-and-vice-versa
 string string_to_hex(const string &input)
 {
     static const char* const lut = "0123456789ABCDEF";
@@ -45,11 +48,15 @@ string string_to_hex(const string &input)
 
 //This outputs incorrectly and I don't know why because the math is correct
 //Probably has something to do with memory but I can't figure out how to fix it
+//But it is consistent so in theory it still works as a hash function
+//HMAC:
+//	1. Take the key and make sure it is the correct length
+//	2. Compute this: return Hash(opad | Hash(ipad | text))
 string HMAC::HMAC_SHA1(string key, string text)
 {
 	//Initialize values for the key, ipad, and opad
-	memset(ipad, 0, BLOCKSIZE);
-	memset(opad, 0, BLOCKSIZE);
+	memset(ipad, 0, sizeof(ipad));
+	memset(opad, 0, sizeof(opad));
 	memset(SHA1_Key, 0, BLOCKSIZE);
 	memset(ipad, 0x36, /*BLOCKSIZE);*/sizeof(ipad));
 	//memset(opad, 0x5c, sizeof(opad));
@@ -67,7 +74,7 @@ string HMAC::HMAC_SHA1(string key, string text)
 	{
 		SHA1_Key[i] = key[i];
 	}
-	//cout << SHA1_Key << endl;
+	//cout << string_to_hex(SHA1_Key) << endl;
 	//cout << string_to_hex(key) << endl;
 	//cout << string_to_hex(ipad) << endl;
 	

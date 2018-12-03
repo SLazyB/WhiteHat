@@ -4,6 +4,8 @@
 
 using namespace std;
 
+//I copied this function from the following link:
+//https://stackoverflow.com/questions/3381614/c-convert-string-to-hexadecimal-and-vice-versa
 string hex_to_string(const string& input)
 {
     static const char* const lut = "0123456789abcdef";
