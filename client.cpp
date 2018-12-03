@@ -22,6 +22,8 @@
 #include <math.h>
 #include <iostream>
 #include "toydes.h"
+#include "HMAC.h"
+
 #define PORT 8080 
    
 #define BUFFER_SIZE 1024
@@ -73,6 +75,8 @@ int main(int argc, char const *argv[])
     set<string> client_enc(enc_init, enc_init+3);
 
     srand(time(NULL));
+    HMAC mac;
+    string mc = "";
 
     struct sockaddr_in address; 
     int sock = 0, n; 
@@ -152,7 +156,8 @@ int main(int argc, char const *argv[])
     memset(&buffer, 0, BUFFER_SIZE);
 
     bitset<10> k(s2);
-    S_DES sec(k.to_string());
+    string key = k.to_string();
+    S_DES sec(key);
     //Handshaking has completed
 
     //User authentication begins
@@ -162,19 +167,39 @@ int main(int argc, char const *argv[])
     cin >> inp;
     
     data = sec.Encrypt(inp);
+    data += mac.HMAC_SHA1(key, inp);
     n = send(sock, data.c_str() , data.length(),0);
     n = recv(sock, buffer, BUFFER_SIZE,0);
-    data = sec.Decrypt(string(buffer));
+    data = string(buffer);
+    memset(&buffer, 0, BUFFER_SIZE);
+    mc = data.substr(data.length() - 40);
+    data = data.substr(0,data.length() -40);
+    data = sec.Decrypt(data);
+    if(mc != mac.HMAC_SHA1(key,data)){
+        return 0;
+    }
+
     memset(&buffer, 0, BUFFER_SIZE);
     if(data == "n"){
         printf("Please give a new password: \n");
         fflush(stdout);
         cin >> inp;
         data = sec.Encrypt(inp);
-        n = send(sock, data.c_str(), data.length(),0);
+        data += mac.HMAC_SHA1(key, inp);
+
+        n = send(sock, data.c_str() , data.length(),0);
         n = recv(sock, buffer, BUFFER_SIZE,0);
-        data = sec.Decrypt(string(buffer));        
+        data = string(buffer);
         memset(&buffer, 0, BUFFER_SIZE);
+        cout << data << endl;
+        cout << data.length() << endl;
+        mc = data.substr(data.length() - 40);
+
+        data = data.substr(0,data.length() -40);
+        data = sec.Decrypt(data);
+        if(mc != mac.HMAC_SHA1(key,data)){
+            return 0;
+        }
         printf("%s\n", data.c_str());
         fflush(stdout);
     }
@@ -183,9 +208,18 @@ int main(int argc, char const *argv[])
         fflush(stdout);
         cin >> inp;
         data = sec.Encrypt(inp);
-        n = send(sock, data.c_str(), data.length(),0);
+        data += mac.HMAC_SHA1(key, inp);
+
+        n = send(sock, data.c_str() , data.length(),0);
         n = recv(sock, buffer, BUFFER_SIZE,0);
-        data = sec.Decrypt(string(buffer));
+        data = string(buffer);
+        memset(&buffer, 0, BUFFER_SIZE);
+        mc = data.substr(data.length() - 40);
+        data = data.substr(0,data.length() - 40);
+        data = sec.Decrypt(data);
+        if(mc != mac.HMAC_SHA1(key,data)){
+            return 0;
+        }
         printf("%s\n", data.c_str());
         fflush(stdout);
         if(data != "accept"){
@@ -195,6 +229,7 @@ int main(int argc, char const *argv[])
     while(inp != "q"){
         cin >> inp;
         data = sec.Encrypt(inp);
+        data += mac.HMAC_SHA1(key, inp);
         n = send(sock, data.c_str() , data.length(),0);
     }
     return 0; 

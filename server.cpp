@@ -20,6 +20,7 @@
 #include <iostream>
 #include <math.h>
 #include "toydes.h"
+#include "HMAC.h"
 #include <map>
 
 #define BUFFER_SIZE 1024
@@ -77,6 +78,8 @@ int main(int argc, char** argv){
     }
 
     map<string, string> users;
+    HMAC mac;
+    string mc;
 
     string enc_init[] = {"rsa","des","3des"};
     set<string> server_enc(enc_init, enc_init+3);
@@ -213,12 +216,16 @@ int main(int argc, char** argv){
 
         }
         bitset<10> k(s2);
-        S_DES sec(k.to_string());
+        string key = k.to_string();
+        S_DES sec(key);
         //Handshaking is complete
 
         //User authentication begins
         n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
-        string u_name = sec.Decrypt(string(buffer));
+        tmp = string(buffer);
+        mc = tmp.substr(tmp.length() - 40);
+        tmp = tmp.substr(0,tmp.length() -40);
+        string u_name = sec.Decrypt(tmp);
         string psd;
         memset(&buffer, 0, BUFFER_SIZE);
         map<string,string>::iterator fnd; 
@@ -226,29 +233,45 @@ int main(int argc, char** argv){
         fnd = users.find(u_name);
         if(fnd == users.end()){
             tmp = sec.Encrypt("n");
+            tmp += mac.HMAC_SHA1(key, "n");
             n = send(newsd, tmp.c_str(),tmp.length(),0);
             n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
-            tmp = sec.Decrypt(string(buffer));
+            tmp = string(buffer);
+            mc = tmp.substr(tmp.length() - 40);
+            tmp = tmp.substr(0,tmp.length() -40);
+            tmp = sec.Decrypt(tmp);
             memset(&buffer, 0, BUFFER_SIZE);
+            if(mc != mac.HMAC_SHA1(key,tmp)){
+                cout << "here " << endl;
+                break;
+            }
             users.insert(pair<string,string>(u_name, tmp));
             psd = tmp;
-            cout << u_name << endl;
-            cout << tmp << endl;
             tmp = sec.Encrypt("received");
+            tmp += mac.HMAC_SHA1(key,"received");
             n = send(newsd, tmp.c_str(),tmp.length(),0);
         }
         else{
             tmp = sec.Encrypt("o");
+            tmp += mac.HMAC_SHA1(key, "o");
             n = send(newsd, tmp.c_str(),tmp.length(),0);
             n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
-            tmp = sec.Decrypt(string(buffer));
+            tmp = string(buffer);
+            mc = tmp.substr(tmp.length() - 40);
+            tmp = tmp.substr(0,tmp.length() -40);
+            tmp = sec.Decrypt(tmp);
             memset(&buffer, 0, BUFFER_SIZE);
+
+            if(mc != mac.HMAC_SHA1(key,tmp)){
+                break;
+            }
             if(users[u_name] != tmp){
                 close(newsd);
                 exit(EXIT_SUCCESS);
             }
             else{
                 tmp = sec.Encrypt("accept");
+                tmp += mac.HMAC_SHA1(key, "accept");
                 n = send(newsd, tmp.c_str(),tmp.length(),0);
             }
         }
@@ -271,7 +294,15 @@ int main(int argc, char** argv){
             }
             else /* n > 0 */
             {
-                tmp = sec.Decrypt(string(buffer));
+                tmp = string(buffer);
+                mc = tmp.substr(tmp.length() - 40);
+                tmp = tmp.substr(0,tmp.length() -40);
+                tmp = sec.Decrypt(tmp);
+                memset(&buffer, 0, BUFFER_SIZE);
+
+                if(mc != mac.HMAC_SHA1(key,tmp)){
+                    break;
+                }
                 printf("%s\n", tmp.c_str());
                 memset(&buffer, 0, BUFFER_SIZE);
                 fflush(stdout);
