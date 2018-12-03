@@ -105,17 +105,13 @@ int main(int argc, char const *argv[])
     } 
 
     //Initializing contact (Message can be anything)
-    send(sock , "hello\n" , 6 , 0 ); 
+    send(sock , "start" , 6 , 0 ); 
     n = recv( sock , buffer, BUFFER_SIZE,0); 
-    printf("%s",buffer ); 
-    fflush(stdout);
     memset(&buffer, 0, BUFFER_SIZE);
 
     //Inform server that list of suite is about to begin
     n = send(sock,"enc",3,0);
     n = recv( sock , buffer, BUFFER_SIZE,0); 
-    printf("%s",buffer ); 
-    fflush(stdout);
     memset(&buffer, 0, BUFFER_SIZE);
 
     //Looping through set to send all encryption methods
@@ -128,8 +124,6 @@ int main(int argc, char const *argv[])
     //Ending encryption
     n = send(sock, "done",4,0);
     n = recv(sock, buffer, BUFFER_SIZE,0);
-    printf("%s\n", buffer);
-    fflush(stdout);
     memset(&buffer, 0, BUFFER_SIZE);
 
     //Receives encryption algorithm
@@ -159,8 +153,45 @@ int main(int argc, char const *argv[])
 
     bitset<10> k(s2);
     S_DES sec(k.to_string());
+    //Handshaking has completed
+
+    //User authentication begins
     string inp = "";
-    cout << "here" << endl;
+    printf("Please enter your username: \n");
+    fflush(stdout);
+    cin >> inp;
+    
+    data = sec.Encrypt(inp);
+    n = send(sock, data.c_str() , data.length(),0);
+    n = recv(sock, buffer, BUFFER_SIZE,0);
+    data = sec.Decrypt(string(buffer));
+    memset(&buffer, 0, BUFFER_SIZE);
+    if(data == "n"){
+        printf("Please give a new password: \n");
+        fflush(stdout);
+        cin >> inp;
+        data = sec.Encrypt(inp);
+        n = send(sock, data.c_str(), data.length(),0);
+        n = recv(sock, buffer, BUFFER_SIZE,0);
+        data = sec.Decrypt(string(buffer));        
+        memset(&buffer, 0, BUFFER_SIZE);
+        printf("%s\n", data.c_str());
+        fflush(stdout);
+    }
+    else{
+        printf("Please enter your password: \n");
+        fflush(stdout);
+        cin >> inp;
+        data = sec.Encrypt(inp);
+        n = send(sock, data.c_str(), data.length(),0);
+        n = recv(sock, buffer, BUFFER_SIZE,0);
+        data = sec.Decrypt(string(buffer));
+        printf("%s\n", data.c_str());
+        fflush(stdout);
+        if(data != "accept"){
+            return 0;
+        }
+    }
     while(inp != "q"){
         cin >> inp;
         data = sec.Encrypt(inp);
