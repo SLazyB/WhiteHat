@@ -109,7 +109,7 @@ long long int power(long long int x, unsigned long long int y, long long int p)
     return c; 
 }
 
-long long int decrypt(long long int c, long long int n, long long int d){
+long long int decrypt(int c, long long int n, long long int d){
     // Decryption m = (c ^ d) % n 
     //printf("c = %lld n= %lld d= %lld \n", c, n, d);
     long long int m = power(c, d, n);
@@ -162,25 +162,49 @@ int main()
     // Message to be encrypted 
     //TBD convert m long long into an long long integer
     //long long int msg = convert("a b");
-    string usr_msg = "PERMUTATIONS of SCIENCE";
+    string usr_msg = "A RanDom STRiNg";
     cout << usr_msg << endl;
     
-    vector <long long int> msg_arr;
+    //vector <long long int> msg_arr;
+    string e_msg_fin = "";
+    string temp = "";
+    string temp1 = to_string(n);
     long long int e_msg = 0;
 
     for(int i = 0; i < usr_msg.length(); i++){
         char curr = usr_msg[i];
         e_msg = convert(curr);
         long long int val = encrypt(e_msg, e, n);
-        printf("Encrypted data = %lld \n", val);
-        msg_arr.push_back(val);
-    }
+        //printf("Encrypted data = %lld \n", val);
+        //msg_arr.push_back(val);
+        temp = to_string(val);
+        
+        //will need to scale with n val
+        while(temp.length() < temp1.length()){
+            temp = "0" + temp;
+        }
+        e_msg_fin += temp;
 
+    }
+    cout  << e_msg_fin << endl;
+    
     //decryption
-    long long int d_msg = 0;
+
+    //string e_msg = ""; //user input goes here for encrypted sequence
     string p_text = "";
-    for( int i = 0; i < msg_arr.size(); i++){
-        long long int pval = decrypt(msg_arr[i],n,d);
+    int n_l = to_string(n).length();
+    int vals = e_msg_fin.length()/n_l;
+
+    int temp_arr [vals];
+    int t = 0;
+    for(int i = 0; i < e_msg_fin.length(); i += n_l){
+        temp_arr[t] = stoi(e_msg_fin.substr(i,n_l));
+        t++;
+    }
+    
+
+    for( int i = 0; i < vals; i++){
+        long long int pval = decrypt(temp_arr[i],n,d);
         //printf("Original Message Sent = %c \n", char(pval));
         p_text += char(pval);
     } 
