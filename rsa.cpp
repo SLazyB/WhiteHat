@@ -1,22 +1,44 @@
 #include <stdio.h> 
 #include <math.h>
-#include <random> 
+#include <random>
+#include <string>
+#include <vector>
 #include<bits/stdc++.h> 
 
-long int random_no(){
-    long int val = 4;
+using namespace std;
 
-    long int i  = PollardRho(val);
-    while(i != 1 || i != 2){
-        val = mt19937 mt_rand(time(0));
-        i = PollardRho(val);
-    }
-    return val;
+//convert message to integer
+long long int convert(char msg){
+    int temp = 0;
+    string temp1 = "";
+    string final = "";
+    
+    temp = int(msg);
+    temp1 = to_string(temp);
+
+    long long int cmsg = stoll(temp1);
+
+    return cmsg;
+}
+//function to return random values
+long long int lcm(long long int num1, long long int num2){
+   long long int maxValue = max(num1, num2);
+   while(1)
+   {
+      //condition of LCM
+      if((maxValue % num1 == 0) && (maxValue % num2 == 0))
+      {
+        return maxValue;
+        break;
+      }
+      ++maxValue;
+   }
+   return 0;
 }
 // Returns gcd of a and b 
-long int gcd(long int a, long int h) 
+long long int gcd(long long int a, long long int h) 
 { 
-    long int temp; 
+    long long int temp; 
     while(1) 
     { 
         temp = a % h; 
@@ -28,89 +50,72 @@ long int gcd(long int a, long int h)
         h = temp; 
     } 
 } 
-
-//Calculate power
-long long int modular_pow(long long int base, int exponent, 
-                        long long int modulus) 
+// C function for extended Euclidean Algorithm 
+long long int gcdExtended(long long int a, long long int b, long long int *x, long long int *y) 
 { 
-    long long int result = 1; 
-
-    while(exponent > 0){ 
-        //if y is odd, multiply base with result
-        if (exponent & 1){
-            result = (result * base) % modulus; 
-        }
-
-        // exponent = exponent/2
-        exponent = exponent >> 1; 
-
-        // base = base * base
-        base = (base * base) % modulus; 
+    // Base Case 
+    if (a == 0) 
+    { 
+        *x = 0, *y = 1; 
+        return b; 
     } 
-    return result; 
+  
+    long long int x1, y1; // To store results of recursive call 
+    long long int gcd = gcdExtended(b%a, a, &x1, &y1); 
+  
+    // Update x and y using results of recursive 
+    // call 
+    *x = y1 - (b/a) * x1; 
+    *y = x1; 
+  
+    return gcd; 
 } 
 
-//return prime divisor of n
-long long int PollardRho(long long int n) 
+long long int modInverse(long long int a, long long int m) 
 { 
-    //random seed
-    srand (time(NULL)); 
-
-    //edge case for if n = 1
-    if(n ==1){
-        return n; 
-    }
-
-    if(n == 2){
-        return n
-    }
-    //divisible by 2 check
-    if(n % 2 == 0){
-        return 2; 
-    }
-
-    //choose random int on range 
-    long long int x = (rand()%(n-2))+2; 
-    long long int y = x; 
-
-    long long int c = (rand()%(n-1))+1; 
-    long long int d = 1; 
-
-    while (d==1) { 
-        x = (modular_pow(x, 2, n) + c + n)%n; 
-
-        y = (modular_pow(y, 2, n) + c + n)%n; 
-        y = (modular_pow(y, 2, n) + c + n)%n; 
-
-        d = __gcd(abs(x-y), n); 
-
-        if( d == 1){
-            return d;
-        }
-
-        //retry if necessary
-        if(d == n){ 
-            return PollardRho(n);
-        }
+    long long int x, y; 
+    long long int g = gcdExtended(a, m, &x, &y);
+    //if g!= 1 Inverse doesn't exist
+     // m is added to handle negative x 
+    long long int res = (x%m + m) % m; 
+    return res;
+}
+/* Iterative Function to calculate (x^y)%p in O(log y) */
+long long int power(long long int x, unsigned long long int y, long long int p) 
+{ 
+    long long int res = 1;      // Initialize result 
+  
+    x = x % p;  // Update x if it is more than or  
+                // equal to p 
+  
+    while (y > 0) 
+    { 
+        // If y is odd, multiply x with result 
+        if (y & 1) 
+            res = (res*x) % p; 
+  
+        // y must be even now 
+        y = y>>1; // y = y/2 
+        x = (x*x) % p;   
     } 
-
-    return d; 
+    return res; 
 } 
-
-long int encrypt(msg, e){
-
+    long long int encrypt(long long int msg, long long int e, long long int n){
+    //printf("msg = %lld e= %lld n= %lld \n", msg, e, n);
     // Encryption c = (msg ^ e) % n 
-    long int c = pow(msg, e); 
-    c = fmod(c, n); 
-    //printf("\nEncrypted data = %lf", c);
+    long long int c = power(msg, e, n); 
+    //printf("c = %lld \n", c);
+    //c = fmod(c, n); 
     return c; 
 }
 
-long int decrypt(msg, e){
+long long int decrypt(long long int c, long long int n, long long int d){
     // Decryption m = (c ^ d) % n 
-    long int m = pow(c, d); 
-    m = fmod(m, n); 
-    //printf("\nOriginal Message Sent = %lf", m); 
+    //printf("c = %lld n= %lld d= %lld \n", c, n, d);
+    long long int m = power(c, d, n);
+    //printf("m = %lld \n", m);
+    //m = fmod(m, n); 
+    //printf("\nOriginal Message Sent = %lu", m); 
     return m;
 }
 
@@ -119,19 +124,20 @@ int main()
 { 
     // Two random prime numbers 
     // Generate Pseudorandomly TBD
-    long int p = 3; 
-    long int q = 7; 
+    long long int p = 61; 
+    long long int q = 53;  
   
     // First part of public key: 
-    long int n = p*q; 
-  
+    long long int n = p*q; 
+
     // Finding other part of public key. 
     // phi is the totient
-    long int phi = (p-1)*(q-1); 
+    long long int phi = lcm((p-1), (q-1)); 
+    printf("phi = %lld \n", phi);
 
     //find e value such that 1 < e < totient(n)
     //final e value will be released as a public key
-    long int e = 2; 
+    long long int e = 2; 
     while (e < phi) 
     { 
         // e must be co-prime to phi and 
@@ -142,20 +148,43 @@ int main()
         else{
             e++; 
         }
-    } 
+    }
     
+    printf("e = %lld \n", e);
     // Private key d will be the private key exponent
     // choosing d such that it satisfies 
     // d*e = 1 + k * totient 
-    int k = 2;  // A constant value 
+    long long int k = 2;  // A constant value 
+    long long int d = modInverse(e, phi); 
+    printf("d = %lld \n", d);
 
-    long int d = (1 + (k*phi))/e; 
-    
 
     // Message to be encrypted 
-    //TBD convert m into an integer
-    long int msg = 20;   
-    //printf("Message data = %lf", msg); 
-  
+    //TBD convert m long long into an long long integer
+    //long long int msg = convert("a b");
+    string usr_msg = "PERMUTATIONS of SCIENCE";
+    cout << usr_msg << endl;
+    
+    vector <long long int> msg_arr;
+    long long int e_msg = 0;
+
+    for(int i = 0; i < usr_msg.length(); i++){
+        char curr = usr_msg[i];
+        e_msg = convert(curr);
+        long long int val = encrypt(e_msg, e, n);
+        printf("Encrypted data = %lld \n", val);
+        msg_arr.push_back(val);
+    }
+
+    //decryption
+    long long int d_msg = 0;
+    string p_text = "";
+    for( int i = 0; i < msg_arr.size(); i++){
+        long long int pval = decrypt(msg_arr[i],n,d);
+        //printf("Original Message Sent = %c \n", char(pval));
+        p_text += char(pval);
+    } 
+
+    cout << p_text << endl;
     return 0; 
 } 
