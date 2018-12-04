@@ -4,7 +4,7 @@
 C++ 11 or later
 
 ## Usage Instructions:
--compile first: g++ server.cpp toydes.cpp rsa.cpp blum_gold.cpp -o server.exe
+-Compile first: g++ server.cpp toydes.cpp rsa.cpp blum_gold.cpp -o server.exe
                g++ client.cpp toydes.cpp rsa.cpp blum_gold.cpp -o client.exe
 -Run the server first (./server.exe)
 -Then run the client (./client.exe)
@@ -15,4 +15,4 @@ then a Password. After that you are free to communicate between client and serve
 failure to enter the correct password will terminate the connection.
 
 ## Other Notes:
--typing q into the client side will terminate the client's connection.
+-Typing q into the client side will terminate the client's connection.
