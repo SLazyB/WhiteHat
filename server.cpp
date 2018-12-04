@@ -276,8 +276,13 @@ int main(int argc, char** argv){
             close( newsd );
         }
         else if (tmp == "rsa"){
-            long long int p = 61;
-            long long int q = 53;
+            prime_gen.generate_prime(10000, 100000);
+            long long int p = prime_gen.get_prime();
+            long long int q = prime_gen.get_prime();
+            while(p == q){
+                q = prime_gen.get_prime();
+            }
+            
             RSA sec(p,q);
             sec.calculate();
             n = recv(newsd, (char*)&buffer, BUFFER_SIZE, 0);
@@ -379,8 +384,19 @@ int main(int argc, char** argv){
             close( newsd );
         }
         else if(tmp == "blum_gold"){
-            long long int p = 499;
-            long long int q = 547;
+            prime_gen.generate_prime(1000,1000000);
+            int p1 = prime_gen.get_prime();
+            while((p1 % 4) != 3){
+                p1 = prime_gen.get_prime();
+            }
+
+            int q1 = prime_gen.get_prime();
+            while((q1 % 4 != 3) || q1 == p1){
+                q1 = prime_gen.get_prime();
+            }
+            long long int p = p1;
+            long long int q = q1;
+
             Blum_Gold sec(p,q);
 
             n = recv(newsd, (char*)&buffer, BUFFER_SIZE, 0);
