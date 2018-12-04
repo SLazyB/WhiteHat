@@ -201,11 +201,16 @@ int main(){
     
     RSA r_2(r_1.e,r_1.n,true);
 
+    cout << "original message is: ";
+    cout << message << endl;
+
     string m1 = r_2.encrypt_message(message);
+    cout << "encrypted message is: ";
     cout << m1 << endl;
     string m2 = r_1.decrypt_message(m1);
+    cout << "decrypted message is: ";
     cout << m2 << endl;
-
 }
 */
+
 
