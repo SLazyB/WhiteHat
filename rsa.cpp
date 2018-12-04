@@ -3,12 +3,16 @@
 #include <random>
 #include <string>
 #include <vector>
-#include<bits/stdc++.h> 
+#include <bits/stdc++.h>
+#include "rsa.h"
 
 using namespace std;
 
+RSA::RSA(long long int fp, long long int fq):p(fp), q(fq) {;}//decrypt
+RSA::RSA(long long int fe, long long int fn,bool mode): e(fe), n(fn) {;}//encrypt
+//math suite start///////////////////////////////////////////////////////////
 //convert message to integer
-long long int convert(char msg){
+long long int RSA::convert(char msg){
     int temp = 0;
     string temp1 = "";
     string final = "";
@@ -21,7 +25,7 @@ long long int convert(char msg){
     return cmsg;
 }
 //function to return random values
-long long int lcm(long long int num1, long long int num2){
+long long int RSA::lcm(long long int num1, long long int num2){
    long long int maxValue = max(num1, num2);
    while(1)
    {
@@ -36,7 +40,7 @@ long long int lcm(long long int num1, long long int num2){
    return 0;
 }
 // Returns gcd of a and b 
-long long int gcd(long long int a, long long int h) 
+long long int RSA::gcd(long long int a, long long int h) 
 { 
     long long int temp; 
     while(1) 
@@ -51,7 +55,7 @@ long long int gcd(long long int a, long long int h)
     } 
 } 
 // C function for extended Euclidean Algorithm 
-long long int gcdExtended(long long int a, long long int b, long long int *x, long long int *y) 
+long long int RSA::gcdExtended(long long int a, long long int b, long long int *x, long long int *y) 
 { 
     // Base Case 
     if (a == 0) 
@@ -70,8 +74,7 @@ long long int gcdExtended(long long int a, long long int b, long long int *x, lo
   
     return gcd; 
 } 
-
-long long int modInverse(long long int a, long long int m) 
+long long int RSA::modInverse(long long int a, long long int m) 
 { 
     long long int x, y; 
     long long int g = gcdExtended(a, m, &x, &y);
@@ -81,7 +84,7 @@ long long int modInverse(long long int a, long long int m)
     return res;
 }
 /* Iterative Function to calculate (x^y)%p in O(log y) */
-long long int power(long long int x, unsigned long long int y, long long int p) 
+long long int RSA::power(long long int x, unsigned long long int y, long long int p) 
 { 
     long long int res = 1;      // Initialize result 
   
@@ -100,44 +103,21 @@ long long int power(long long int x, unsigned long long int y, long long int p)
     } 
     return res; 
 } 
-    long long int encrypt(long long int msg, long long int e, long long int n){
-    //printf("msg = %lld e= %lld n= %lld \n", msg, e, n);
-    // Encryption c = (msg ^ e) % n 
-    long long int c = power(msg, e, n); 
-    //printf("c = %lld \n", c);
-    //c = fmod(c, n); 
-    return c; 
-}
 
-long long int decrypt(int c, long long int n, long long int d){
-    // Decryption m = (c ^ d) % n 
-    //printf("c = %lld n= %lld d= %lld \n", c, n, d);
-    long long int m = power(c, d, n);
-    //printf("m = %lld \n", m);
-    //m = fmod(m, n); 
-    //printf("\nOriginal Message Sent = %lu", m); 
-    return m;
-}
-
-// Code to demonstrate RSA algorithm 
-int main() 
-{ 
+void RSA::calculate(){
     // Two random prime numbers 
-    // Generate Pseudorandomly TBD
-    long long int p = 61; 
-    long long int q = 53;  
+    // Generate Pseudorandomly TBD - TO REMOVE
   
     // First part of public key: 
-    long long int n = p*q; 
+    n = p*q; 
 
     // Finding other part of public key. 
     // phi is the totient
-    long long int phi = lcm((p-1), (q-1)); 
-    printf("phi = %lld \n", phi);
+    phi = lcm((p-1), (q-1)); 
 
     //find e value such that 1 < e < totient(n)
     //final e value will be released as a public key
-    long long int e = 2; 
+    e = 2; 
     while (e < phi) 
     { 
         // e must be co-prime to phi and 
@@ -150,33 +130,35 @@ int main()
         }
     }
     
-    printf("e = %lld \n", e);
     // Private key d will be the private key exponent
     // choosing d such that it satisfies 
-    // d*e = 1 + k * totient 
-    long long int k = 2;  // A constant value 
-    long long int d = modInverse(e, phi); 
-    printf("d = %lld \n", d);
-
-
-    // Message to be encrypted 
-    //TBD convert m long long into an long long integer
-    //long long int msg = convert("a b");
-    string usr_msg = "A RanDom STRiNg";
-    cout << usr_msg << endl;
-    
-    //vector <long long int> msg_arr;
+    d = modInverse(e, phi); 
+}
+/////////////////////////////////////////////////////////////////////////
+//basic encrypt and decrypt suite
+long long int RSA::encrypt(long long int msg, long long int e, long long int n){
+    // Encryption c = (msg ^ e) % n 
+    long long int c = power(msg, e, n); 
+    //c = fmod(c, n); 
+    return c; 
+}
+long long int RSA::decrypt(int c, long long int n, long long int d){
+    // Decryption m = (c ^ d) % n 
+    long long int m = power(c, d, n);
+    return m;
+}
+////////////////////////////////////////////////////////////////////////
+string RSA::encrypt_message(string usr_msg){
+    string temp1 = to_string(n);
     string e_msg_fin = "";
     string temp = "";
-    string temp1 = to_string(n);
     long long int e_msg = 0;
+
 
     for(int i = 0; i < usr_msg.length(); i++){
         char curr = usr_msg[i];
         e_msg = convert(curr);
         long long int val = encrypt(e_msg, e, n);
-        //printf("Encrypted data = %lld \n", val);
-        //msg_arr.push_back(val);
         temp = to_string(val);
         
         //will need to scale with n val
@@ -186,29 +168,45 @@ int main()
         e_msg_fin += temp;
 
     }
-    cout  << e_msg_fin << endl;
-    
-    //decryption
-
-    //string e_msg = ""; //user input goes here for encrypted sequence
+    return e_msg_fin;
+}
+string RSA::decrypt_message(string usr_msg){
     string p_text = "";
     int n_l = to_string(n).length();
-    int vals = e_msg_fin.length()/n_l;
+    int vals = usr_msg.length()/n_l;
 
     int temp_arr [vals];
     int t = 0;
-    for(int i = 0; i < e_msg_fin.length(); i += n_l){
-        temp_arr[t] = stoi(e_msg_fin.substr(i,n_l));
+    for(int i = 0; i < usr_msg.length(); i += n_l){
+        temp_arr[t] = stoi(usr_msg.substr(i,n_l));
         t++;
     }
     
-
     for( int i = 0; i < vals; i++){
         long long int pval = decrypt(temp_arr[i],n,d);
-        //printf("Original Message Sent = %c \n", char(pval));
         p_text += char(pval);
     } 
+    return p_text;
+}
 
-    cout << p_text << endl;
-    return 0; 
-} 
+//test code for main
+/*
+int main(){
+
+    //encrypt test
+    string message = "hello world";
+    long long int p = 61; 
+    long long int q = 53;  
+    RSA r_1(p,q);
+    r_1.calculate();
+    
+    RSA r_2(r_1.e,r_1.n,true);
+
+    string m1 = r_2.encrypt_message(message);
+    cout << m1 << endl;
+    string m2 = r_1.decrypt_message(m1);
+    cout << m2 << endl;
+
+}
+*/
+
