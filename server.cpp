@@ -278,8 +278,10 @@ int main(int argc, char** argv){
         else if (tmp == "rsa"){
             prime_gen.generate_prime(10000, 100000);
             long long int p = prime_gen.get_prime();
+            prime_gen.generate_prime(10000, 100000);
             long long int q = prime_gen.get_prime();
             while(p == q){
+                prime_gen.generate_prime(10000, 100000);
                 q = prime_gen.get_prime();
             }
             
@@ -384,33 +386,35 @@ int main(int argc, char** argv){
             close( newsd );
         }
         else if(tmp == "blum_gold"){
-            prime_gen.generate_prime(1000,1000000);
+
+            prime_gen.generate_prime(400,1000);
             int p1 = prime_gen.get_prime();
             while((p1 % 4) != 3){
+                prime_gen.generate_prime(400,1000);
                 p1 = prime_gen.get_prime();
             }
 
+            prime_gen.generate_prime(400,1000);
             int q1 = prime_gen.get_prime();
             while((q1 % 4 != 3) || q1 == p1){
+                prime_gen.generate_prime(400,1000);
                 q1 = prime_gen.get_prime();
             }
-            long long int p = p1;
-            long long int q = q1;
+
+            long long int p = 499;
+            long long int q = 547;
 
             Blum_Gold sec(p,q);
-
             n = recv(newsd, (char*)&buffer, BUFFER_SIZE, 0);
             memset(&buffer, 0, BUFFER_SIZE);
-
             tmp = to_string(sec.key);
             n = send(newsd, tmp.c_str(), tmp.length(),0);
             n = recv(newsd, (char*)&buffer, BUFFER_SIZE, 0);
             string test = string(buffer);
             memset(&buffer, 0, BUFFER_SIZE);
-            
             n = send(newsd, "yo\n", 3, 0);
             n = recv(newsd, (char*)&buffer, BUFFER_SIZE, 0);
-            long long int prev = atoi(string(buffer).c_str());
+            long long int prev = atoll(string(buffer).c_str());
             memset(&buffer, 0, BUFFER_SIZE);
             tmp = sec.Decrypt1(test,prev);
             if(tmp != "hi"){
