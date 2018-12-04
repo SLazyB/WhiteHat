@@ -30,7 +30,7 @@ long long int Blum_Gold::modexp(long long int base, long long int exponent, long
 }
 
 //Bob encrypting a message for Alice
-pair<string, long long int> Blum_Gold::encrypt(string m1){
+pair<string, long long int> Blum_Gold::Encrypt1(string m1){
     string m = "";
     for(int i = 0; i < m1.length(); i++){
         m += bitset<8>(m1.c_str()[i]).to_string();
@@ -72,8 +72,47 @@ pair<string, long long int> Blum_Gold::encrypt(string m1){
     return pair<string, long long int>(out,prev);
 }
 
+string Blum_Gold::Encrypt(string m1){
+    string m = "";
+    for(int i = 0; i < m1.length(); i++){
+        m += bitset<8>(m1.c_str()[i]).to_string();
+    }
+    //Calculate text size for each chunk of message
+    int k = floor(log2(key));
+    int h = floor(log2(k));
+    
+    //Number of chunks of text
+    int num_text = ceil(m.length()/h);
+    
+    //Stores the x values
+    long long int prev = seed;
+    
+    //Output string
+    string out = "";
+    
+    string temp = "";
+
+    for(int i = 0; i < num_text; i++){
+        temp = m.substr(i*h, h);
+        
+        //Calculates x
+        prev = pow(prev,2);
+        prev = prev % key;
+        
+        //Obtains the least significant 4 bits
+        bitset<4> tmp_bit(prev);
+        
+        //XOR
+        tmp_bit ^= bitset<4>(temp);
+        
+        out += tmp_bit.to_string();
+    }
+    
+    return out;
+}
+
 //Alice decrypting a message from Bob
-string Blum_Gold::decrypt(string c, long int l_x){
+string Blum_Gold::Decrypt1(string c, long int l_x){
 
     int a = -57;
     int b = 52;
@@ -92,6 +131,42 @@ string Blum_Gold::decrypt(string c, long int l_x){
     int u = modexp(l_x,rp,p);
     int v = modexp(l_x,rq,q);
     seed = (v*a*p + u*b*q) % key;
+    long long int prev = seed;
+    
+    //Output string
+    string out = "";
+    
+    string temp = "";
+    for(int i = 0; i < num_text; i++){
+        temp = c.substr(i*h, h);
+        
+        //Calculates x
+        prev = pow(prev,2);
+        prev = prev % key;
+        
+        //Obtains the least significant 4 bits
+        bitset<4> tmp_bit(prev);
+        
+        //XOR
+        tmp_bit ^= bitset<4>(temp);
+        out += tmp_bit.to_string();
+    }
+    string out1 = "";
+    for(int i = 0; i < out.length()/8; ++i ){
+        out1 += char(bitset<8>(out.substr(i*8,8)).to_ulong());
+    }
+    return out1;
+}
+
+string Blum_Gold::Decrypt(string c){
+
+    //Calculate text size for each chunk of message
+    int k = floor(log2(key));
+    int h = floor(log2(k));
+    
+    //Number of chunks of text
+    int num_text = ceil(c.length()/h);
+
     long long int prev = seed;
     
     //Output string

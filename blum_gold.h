@@ -16,8 +16,10 @@ public:
     Blum_Gold(long long int fp, long long int fq);
     Blum_Gold(long long int fseed, long long int fkey, bool use);
     long long int modexp(long long int base, long long int exponent, long long int mod);
-    pair<string, long long int> encrypt(string m);
-    string decrypt(string c, long int l_x);
+    pair<string, long long int> Encrypt1(string m);
+    string Encrypt(string m);
+    string Decrypt1(string c, long int l_x);
+    string Decrypt(string c);
 
     long long int key;
 private:

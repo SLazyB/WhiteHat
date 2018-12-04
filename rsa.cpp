@@ -3,7 +3,6 @@
 #include <random>
 #include <string>
 #include <vector>
-#include <bits/stdc++.h>
 #include "rsa.h"
 
 using namespace std;
@@ -136,19 +135,19 @@ void RSA::calculate(){
 }
 /////////////////////////////////////////////////////////////////////////
 //basic encrypt and decrypt suite
-long long int RSA::encrypt(long long int msg, long long int e, long long int n){
+long long int RSA::enc(long long int msg, long long int e, long long int n){
     // Encryption c = (msg ^ e) % n 
     long long int c = power(msg, e, n); 
     //c = fmod(c, n); 
     return c; 
 }
-long long int RSA::decrypt(int c, long long int n, long long int d){
+long long int RSA::dec(int c, long long int n, long long int d){
     // Decryption m = (c ^ d) % n 
     long long int m = power(c, d, n);
     return m;
 }
 ////////////////////////////////////////////////////////////////////////
-string RSA::encrypt_message(string usr_msg){
+string RSA::Encrypt(string usr_msg){
     string temp1 = to_string(n);
     string e_msg_fin = "";
     string temp = "";
@@ -158,7 +157,7 @@ string RSA::encrypt_message(string usr_msg){
     for(int i = 0; i < usr_msg.length(); i++){
         char curr = usr_msg[i];
         e_msg = convert(curr);
-        long long int val = encrypt(e_msg, e, n);
+        long long int val = enc(e_msg, e, n);
         temp = to_string(val);
         
         //will need to scale with n val
@@ -170,7 +169,7 @@ string RSA::encrypt_message(string usr_msg){
     }
     return e_msg_fin;
 }
-string RSA::decrypt_message(string usr_msg){
+string RSA::Decrypt(string usr_msg){
     string p_text = "";
     int n_l = to_string(n).length();
     int vals = usr_msg.length()/n_l;
@@ -183,7 +182,7 @@ string RSA::decrypt_message(string usr_msg){
     }
     
     for( int i = 0; i < vals; i++){
-        long long int pval = decrypt(temp_arr[i],n,d);
+        long long int pval = dec(temp_arr[i],n,d);
         p_text += char(pval);
     } 
     return p_text;

@@ -3,7 +3,6 @@
 #include <random>
 #include <string>
 #include <vector>
-#include<bits/stdc++.h>
 
 using namespace std;
 
@@ -16,10 +15,10 @@ public:
 	long long int e;
 	long long int p;
 	long long int q;
-	string encrypt_message(string usr_msg);
-	string decrypt_message(string usr_msg);
-	long long int encrypt(long long int msg, long long int e, long long int n);
-	long long int decrypt(int c, long long int n, long long int d);
+	string Encrypt(string usr_msg);
+	string Decrypt(string usr_msg);
+	long long int enc(long long int msg, long long int e, long long int n);
+	long long int dec(int c, long long int n, long long int d);
 	void calculate();
 
 private:

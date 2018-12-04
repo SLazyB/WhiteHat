@@ -21,6 +21,9 @@
 #include <math.h>
 #include "toydes.h"
 #include "HMAC.h"
+#include "blum_gold.h"
+#include "rsa.h"
+#include "prime_generator.h"
 #include <map>
 
 #define BUFFER_SIZE 1024
@@ -40,48 +43,18 @@ int cmpfunc (const void * a, const void * b)
    return strcmp(*ia, *ib);
 }
 
-int getprime(){
-    bool done = false;
-    int test;
-    int i = 0;
-    int w = 0;
-    while (!done) {
-        test = rand();
-        if(test == 2 || test == 3){
-            done = true;
-        }
-        else if(test % 2 == 0 || test % 3 == 0){
-            continue;
-        }
-        else{
-            i = 5;
-            w = 2;
-            while (i * i <= test){
-                if(test % i == 0){
-                    break;
-                }
-                i += w;
-                w = 6 - w;
-            }
-            if(i * i > test){
-                done = true;
-            }
-        }
-    }
-    return test;
-}
-
 int main(int argc, char** argv){
     if(argc != 1){
         perror("ERROR: Incorrect number of arguments");
         return EXIT_FAILURE;
     }
+    prime_generator prime_gen;
 
     map<string, string> users;
     HMAC mac;
     string mc;
-
-    string enc_init[] = {"rsa","des","3des"};
+    string key = "";
+    string enc_init[] = {"rsa","sdes","blum_gold"};
     set<string> server_enc(enc_init, enc_init+3);
     printf("Started server\n");
     fflush(stdout);
@@ -144,13 +117,6 @@ int main(int argc, char** argv){
         srand(time(NULL));
         set<string> client_enc;
 
-        //Initializing Diffie-Hellman (TBD: Needs better randomization)     
-        int p = 97;
-        int g = 7;
-        int s1 = rand() % 9 + 1;
-        int m1 = long(pow(g, s1)) % p;  //Needs to be sent
-        int s2;     //Symmetric keys
-
         /* recv() will block until we receive data (n > 0)
                 or there's an error (n == -1)
                 or the client closed the socket (n == 0) */
@@ -200,100 +166,61 @@ int main(int argc, char** argv){
 
             //Matching encryption found
             n = recv(newsd, (char*)&buffer, BUFFER_SIZE, 0);
+            memset(&buffer, 0, BUFFER_SIZE);
             n = send(newsd, tmp.c_str(), tmp.length(), 0);
+        }
+        if(tmp == "sdes"){
+            //Initializing Diffie-Hellman (TBD: Needs better randomization)     
+            int p = 97;
+            int g = 7;
+            int s1 = rand() % 9 + 1;
+            int m1 = long(pow(g, s1)) % p;  //Needs to be sent
+            int s2;     //Symmetric keys
 
-            
             tmp = to_string(m1);
-
             n = recv(newsd, (char*)&buffer, BUFFER_SIZE, 0);
             n = send(newsd, tmp.c_str(), tmp.length(),0);
 
             tmp = string(buffer);
             s2 = diffie(p, s1, atoi(tmp.c_str()));
-            printf("%d\n",s2);
-            fflush(stdout);
             memset(&buffer, 0, BUFFER_SIZE);
 
-        }
-        bitset<10> k(s2);
-        string key = k.to_string();
-        S_DES sec(key);
-        //Handshaking is complete
+            bitset<10> k(s2);
+            key = k.to_string();
+            S_DES sec(key);
 
-        //User authentication begins
-        n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
-        tmp = string(buffer);
-        mc = tmp.substr(tmp.length() - 40);
-        tmp = tmp.substr(0,tmp.length() -40);
-        string u_name = sec.Decrypt(tmp);
-        string psd;
-        memset(&buffer, 0, BUFFER_SIZE);
-        map<string,string>::iterator fnd; 
-
-        fnd = users.find(u_name);
-        if(fnd == users.end()){
-            tmp = sec.Encrypt("n");
-            tmp += mac.HMAC_SHA1(key, "n");
-            n = send(newsd, tmp.c_str(),tmp.length(),0);
+            //User authentication begins
             n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
             tmp = string(buffer);
             mc = tmp.substr(tmp.length() - 40);
             tmp = tmp.substr(0,tmp.length() -40);
-            tmp = sec.Decrypt(tmp);
+            string u_name = sec.Decrypt(tmp);
+            string psd;
             memset(&buffer, 0, BUFFER_SIZE);
-            if(mc != mac.HMAC_SHA1(key,tmp)){
-                cout << "here " << endl;
-                break;
-            }
-            users.insert(pair<string,string>(u_name, tmp));
-            psd = tmp;
-            tmp = sec.Encrypt("received");
-            tmp += mac.HMAC_SHA1(key,"received");
-            n = send(newsd, tmp.c_str(),tmp.length(),0);
-        }
-        else{
-            tmp = sec.Encrypt("o");
-            tmp += mac.HMAC_SHA1(key, "o");
-            n = send(newsd, tmp.c_str(),tmp.length(),0);
-            n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
-            tmp = string(buffer);
-            mc = tmp.substr(tmp.length() - 40);
-            tmp = tmp.substr(0,tmp.length() -40);
-            tmp = sec.Decrypt(tmp);
-            memset(&buffer, 0, BUFFER_SIZE);
+            map<string,string>::iterator fnd; 
 
-            if(mc != mac.HMAC_SHA1(key,tmp)){
-                break;
-            }
-            if(users[u_name] != tmp){
-                close(newsd);
-                exit(EXIT_SUCCESS);
-            }
-            else{
-                tmp = sec.Encrypt("accept");
-                tmp += mac.HMAC_SHA1(key, "accept");
+            fnd = users.find(u_name);
+            if(fnd == users.end()){
+                tmp = "n";
+                n = send(newsd, tmp.c_str(),tmp.length(),0);
+                n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
+                tmp = string(buffer);
+                mc = tmp.substr(tmp.length() - 40);
+                tmp = tmp.substr(0,tmp.length() -40);
+                tmp = sec.Decrypt(tmp);
+                memset(&buffer, 0, BUFFER_SIZE);
+                if(mc != mac.HMAC_SHA1(key,tmp)){
+                    break;
+                }
+                users.insert(pair<string,string>(u_name, tmp));
+                psd = tmp;
+                tmp = "received";
                 n = send(newsd, tmp.c_str(),tmp.length(),0);
             }
-        }
-        do
-        {
-            /* recv() will block until we receive data (n > 0)
-                or there's an error (n == -1)
-                or the client closed the socket (n == 0) */
-            n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
-
-            if ( n == -1 )
-            {
-                perror( "ERROR: RECV FAILED" );
-                return EXIT_FAILURE;
-            }
-            else if ( n == 0 )
-            {
-                printf( "[child %d] Client disconnected\n",getpid() );
-                fflush(stdout);
-            }
-            else /* n > 0 */
-            {
+            else{
+                tmp = "o";
+                n = send(newsd, tmp.c_str(),tmp.length(),0);
+                n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
                 tmp = string(buffer);
                 mc = tmp.substr(tmp.length() - 40);
                 tmp = tmp.substr(0,tmp.length() -40);
@@ -303,13 +230,267 @@ int main(int argc, char** argv){
                 if(mc != mac.HMAC_SHA1(key,tmp)){
                     break;
                 }
-                printf("%s\n", tmp.c_str());
-                memset(&buffer, 0, BUFFER_SIZE);
-                fflush(stdout);
+                if(users[u_name] != tmp){
+                    close(newsd);
+                    exit(EXIT_SUCCESS);
+                }
+                else{
+                    tmp = "accept";
+                    n = send(newsd, tmp.c_str(),tmp.length(),0);
+                }
             }
+            do
+            {
+                /* recv() will block until we receive data (n > 0)
+                    or there's an error (n == -1)
+                    or the client closed the socket (n == 0) */
+                n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
+
+                if ( n == -1 )
+                {
+                    perror( "ERROR: RECV FAILED" );
+                    return EXIT_FAILURE;
+                }
+                else if ( n == 0 )
+                {
+                    printf( "[child %d] Client disconnected\n",getpid() );
+                    fflush(stdout);
+                }
+                else /* n > 0 */
+                {
+                    tmp = string(buffer);
+                    mc = tmp.substr(tmp.length() - 40);
+                    tmp = tmp.substr(0,tmp.length() -40);
+                    tmp = sec.Decrypt(tmp);
+                    memset(&buffer, 0, BUFFER_SIZE);
+
+                    if(mc != mac.HMAC_SHA1(key,tmp)){
+                        break;
+                    }
+                    printf("%s\n", tmp.c_str());
+                    memset(&buffer, 0, BUFFER_SIZE);
+                    fflush(stdout);
+                }
+            }
+            while ( n > 0 );
+            close( newsd );
         }
-        while ( n > 0 );
-        close( newsd );
+        else if (tmp == "rsa"){
+            long long int p = 61;
+            long long int q = 53;
+            RSA sec(p,q);
+            sec.calculate();
+            n = recv(newsd, (char*)&buffer, BUFFER_SIZE, 0);
+            memset(&buffer, 0, BUFFER_SIZE);
+
+            tmp = to_string(sec.e);
+            n = send(newsd, tmp.c_str(), tmp.length(),0);
+            n = recv(newsd, (char*)&buffer, BUFFER_SIZE, 0);
+            memset(&buffer, 0, BUFFER_SIZE);
+
+            tmp = to_string(sec.n);
+            n = send(newsd, tmp.c_str(), tmp.length(),0);
+
+            //User authentication begins
+            n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
+            tmp = string(buffer);
+            mc = tmp.substr(tmp.length() - 40);
+            tmp = tmp.substr(0,tmp.length() -40);
+            string u_name = sec.Decrypt(tmp);
+            string psd;
+            memset(&buffer, 0, BUFFER_SIZE);
+            map<string,string>::iterator fnd; 
+
+            fnd = users.find(u_name);
+            if(fnd == users.end()){
+                tmp = "n";
+                n = send(newsd, tmp.c_str(),tmp.length(),0);
+                n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
+                tmp = string(buffer);
+                mc = tmp.substr(tmp.length() - 40);
+                tmp = tmp.substr(0,tmp.length() -40);
+                tmp = sec.Decrypt(tmp);
+                memset(&buffer, 0, BUFFER_SIZE);
+                if(mc != mac.HMAC_SHA1(key,tmp)){
+                    cout << "here " << endl;
+                    break;
+                }
+                users.insert(pair<string,string>(u_name, tmp));
+                psd = tmp;
+                tmp = "received";
+                n = send(newsd, tmp.c_str(),tmp.length(),0);
+            }
+            else{
+                tmp = "o";
+                n = send(newsd, tmp.c_str(),tmp.length(),0);
+                n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
+                tmp = string(buffer);
+                mc = tmp.substr(tmp.length() - 40);
+                tmp = tmp.substr(0,tmp.length() -40);
+                tmp = sec.Decrypt(tmp);
+                memset(&buffer, 0, BUFFER_SIZE);
+
+                if(mc != mac.HMAC_SHA1(key,tmp)){
+                    break;
+                }
+                if(users[u_name] != tmp){
+                    close(newsd);
+                    exit(EXIT_SUCCESS);
+                }
+                else{
+                    tmp = "accept";
+                    n = send(newsd, tmp.c_str(),tmp.length(),0);
+                }
+            }
+            do
+            {
+                /* recv() will block until we receive data (n > 0)
+                    or there's an error (n == -1)
+                    or the client closed the socket (n == 0) */
+                n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
+
+                if ( n == -1 )
+                {
+                    perror( "ERROR: RECV FAILED" );
+                    return EXIT_FAILURE;
+                }
+                else if ( n == 0 )
+                {
+                    printf( "[child %d] Client disconnected\n",getpid() );
+                    fflush(stdout);
+                }
+                else /* n > 0 */
+                {
+                    tmp = string(buffer);
+                    mc = tmp.substr(tmp.length() - 40);
+                    tmp = tmp.substr(0,tmp.length() -40);
+                    tmp = sec.Decrypt(tmp);
+                    memset(&buffer, 0, BUFFER_SIZE);
+
+                    if(mc != mac.HMAC_SHA1(key,tmp)){
+                        break;
+                    }
+                    printf("%s\n", tmp.c_str());
+                    memset(&buffer, 0, BUFFER_SIZE);
+                    fflush(stdout);
+                }
+            }
+            while ( n > 0 );
+            close( newsd );
+        }
+        else if(tmp == "blum_gold"){
+            long long int p = 499;
+            long long int q = 547;
+            Blum_Gold sec(p,q);
+
+            n = recv(newsd, (char*)&buffer, BUFFER_SIZE, 0);
+            memset(&buffer, 0, BUFFER_SIZE);
+
+            tmp = to_string(sec.key);
+            n = send(newsd, tmp.c_str(), tmp.length(),0);
+            n = recv(newsd, (char*)&buffer, BUFFER_SIZE, 0);
+            string test = string(buffer);
+            memset(&buffer, 0, BUFFER_SIZE);
+            
+            n = send(newsd, "yo\n", 3, 0);
+            n = recv(newsd, (char*)&buffer, BUFFER_SIZE, 0);
+            long long int prev = atoi(string(buffer).c_str());
+            memset(&buffer, 0, BUFFER_SIZE);
+            tmp = sec.Decrypt1(test,prev);
+            if(tmp != "hi"){
+                close(newsd);
+                break;
+            }
+            n = send(newsd, "yo\n", 3, 0);
+
+             //User authentication begins
+            n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
+            tmp = string(buffer);
+            mc = tmp.substr(tmp.length() - 40);
+            tmp = tmp.substr(0,tmp.length() -40);
+            string u_name = sec.Decrypt(tmp);
+            string psd;
+            memset(&buffer, 0, BUFFER_SIZE);
+            map<string,string>::iterator fnd; 
+
+            fnd = users.find(u_name);
+            if(fnd == users.end()){
+                tmp = "n";
+                n = send(newsd, tmp.c_str(),tmp.length(),0);
+                n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
+                tmp = string(buffer);
+                mc = tmp.substr(tmp.length() - 40);
+                tmp = tmp.substr(0,tmp.length() -40);
+                tmp = sec.Decrypt(tmp);
+                memset(&buffer, 0, BUFFER_SIZE);
+                if(mc != mac.HMAC_SHA1(key,tmp)){
+                    cout << "here " << endl;
+                    break;
+                }
+                users.insert(pair<string,string>(u_name, tmp));
+                psd = tmp;
+                tmp = "received";
+                n = send(newsd, tmp.c_str(),tmp.length(),0);
+            }
+            else{
+                tmp = "o";
+                n = send(newsd, tmp.c_str(),tmp.length(),0);
+                n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
+                tmp = string(buffer);
+                mc = tmp.substr(tmp.length() - 40);
+                tmp = tmp.substr(0,tmp.length() -40);
+                tmp = sec.Decrypt(tmp);
+                memset(&buffer, 0, BUFFER_SIZE);
+
+                if(mc != mac.HMAC_SHA1(key,tmp)){
+                    break;
+                }
+                if(users[u_name] != tmp){
+                    close(newsd);
+                    exit(EXIT_SUCCESS);
+                }
+                else{
+                    tmp = "accept";
+                    n = send(newsd, tmp.c_str(),tmp.length(),0);
+                }
+            }
+            do
+            {
+                /* recv() will block until we receive data (n > 0)
+                    or there's an error (n == -1)
+                    or the client closed the socket (n == 0) */
+                n = recv( newsd, (char*)&buffer, BUFFER_SIZE, 0);
+
+                if ( n == -1 )
+                {
+                    perror( "ERROR: RECV FAILED" );
+                    return EXIT_FAILURE;
+                }
+                else if ( n == 0 )
+                {
+                    printf( "[child %d] Client disconnected\n",getpid() );
+                    fflush(stdout);
+                }
+                else /* n > 0 */
+                {
+                    tmp = string(buffer);
+                    mc = tmp.substr(tmp.length() - 40);
+                    tmp = tmp.substr(0,tmp.length() -40);
+                    tmp = sec.Decrypt(tmp);
+                    memset(&buffer, 0, BUFFER_SIZE);
+
+                    if(mc != mac.HMAC_SHA1(key,tmp)){
+                        break;
+                    }
+                    printf("%s\n", tmp.c_str());
+                    memset(&buffer, 0, BUFFER_SIZE);
+                    fflush(stdout);
+                }
+            }
+            while ( n > 0 );
+            close( newsd );
+        }
+        
     }
     return EXIT_SUCCESS;
 }
