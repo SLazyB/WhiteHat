@@ -285,7 +285,10 @@ int main(int argc, char const *argv[])
         data = string(buffer);
         n1 = atoi(data.c_str());
         memset(&buffer, 0, BUFFER_SIZE);
-        long int seed = 159201;
+        prime_gen.generate_prime(1, n1);
+        int r = prime_gen.get_prime();
+        r = (r * r) % n1;
+        long int seed = r; 
         Blum_Gold sec(seed, n1, false);
         pair<string, long long int> enc1 = sec.Encrypt1("hi");
 
